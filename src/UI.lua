@@ -190,6 +190,8 @@ stopBtn.MouseButton1Click:Connect(stopScript)
 
 UI.createButton("Flight", true)
 UI.createButton("Fullbright", true)
+UI.createButton("Noclip", true)
+UI.createButton("Speed", true)
 UI.createButton("CaptureThePoint", true)
 UI.createButton("Scrap", true)
 UI.createButton("Entities", true)
@@ -212,4 +214,3 @@ UIS.InputBegan:Connect(function(input, gpe)
 end)
 
 print("✅ UI Loaded: [Backquote] để ẩn/hiện, [Ctrl + Backquote] để dừng.")
-

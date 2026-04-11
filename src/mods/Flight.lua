@@ -34,23 +34,34 @@ local movementKeys = {
     [Enum.KeyCode.RightControl] = "down",
 }
 
--- UI Register
-_G.state.settings.Flight = false
-
 _G.UI.addEventHandler("Flight", function(enabled)
-    _G.state.settings.Flight = enabled -- Keep state synced
     Flight:toggle(enabled) -- FIXED: Changed '.' to ':'
 end)
 
 _G.UI.addStopHandler(function()
-    _G.state.settings.Flight = false
+    _G.UI.settings.Flight = false
     Flight:toggle(false)
 end)
 
 -- Main
 
 local function getCharacter()
-    return localPlayer and localPlayer.Character
+    if not localPlayer then
+        return nil
+    end
+
+    local character = localPlayer.Character
+    if character and character.Parent then
+        return character
+    end
+
+    local charactersFolder = Workspace:FindFirstChild("Characters")
+    local playersFolder = charactersFolder and charactersFolder:FindFirstChild("Player")
+    if playersFolder then
+        return playersFolder:FindFirstChild(localPlayer.Name)
+    end
+
+    return nil
 end
 
 local function clearDirections()
@@ -184,7 +195,7 @@ local function startFlight()
     renderConnection = RunService.RenderStepped:Connect(function()
         local currentCharacter = getCharacter()
         if currentCharacter ~= character or not rootPart.Parent then
-            if (_G.state.settings.Flight or false) then
+            if (_G.UI.settings.Flight or false) then
                 task.defer(startFlight)
             end
             stopFlight()
@@ -209,7 +220,7 @@ local function bindMovementInput()
         end
 
         local direction = movementKeys[input.KeyCode]
-        if direction and (_G.state.settings.Flight or false) then
+        if direction and (_G.UI.settings.Flight or false) then
             activeDirections[direction] = true
         end
     end)
@@ -232,7 +243,7 @@ local function bindCharacterReset()
     end
 
     characterAddedConnection = localPlayer.CharacterAdded:Connect(function()
-        if (_G.state.settings.Flight or false) then
+        if (_G.UI.settings.Flight or false) then
             task.wait(0.1)
             startFlight()
         end

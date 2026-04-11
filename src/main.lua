@@ -16,9 +16,9 @@ _G.running = true
 fetch("UI.lua")
 fetch("ESP.lua")
 
--- fetch("mods/Fullbright.lua")
--- fetch("mods/Flight.lua")
--- fetch("mods/Speed.lua")
--- fetch("mods/Noclip.lua")
+fetch("mods/Fullbright.lua")
+fetch("mods/Flight.lua")
+fetch("mods/Speed.lua")
+fetch("mods/Noclip.lua")
 
 print("✅ Modules loaded from " .. baseUrl)
