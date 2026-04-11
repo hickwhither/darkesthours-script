@@ -10,7 +10,7 @@ def src_file(filepath):
 def index():
     with open("./src/main.lua", "r") as f:
         c = f.read().strip()
-    c = c.replace("https://raw.githubusercontent.com/hickwhither/my-new-pc/refs/heads/master/src/", 'http://127.0.0.1:5000/src/')
+    c = c.replace("https://github.com/hickwhither/darkesthours-script/raw/refs/heads/master/src/", 'http://127.0.0.1:5000/src/')
     return c
 
 app.run('0.0.0.0', 5000)
