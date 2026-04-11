@@ -14,7 +14,7 @@ local ESP = {
     ButtonUpdateConnection = nil,
 }
 
-local BUTTON_SIZE = Vector2.new(70, 24)
+local BUTTON_SIZE = Vector2.new(120, 24)
 
 local function ensureButtonGui()
     if ESP.ButtonGui and ESP.ButtonGui.Parent then
@@ -86,7 +86,7 @@ local function resolveAdornee(target)
     end
 end
 
-local function createTeleportButton(targetObj)
+local function createTeleportButton(targetObj, labelText, color)
     local gui = ensureButtonGui()
     if not gui then
         return nil
@@ -95,21 +95,20 @@ local function createTeleportButton(targetObj)
     local btn = Instance.new("TextButton")
     btn.Name = "ESP_Teleport"
     btn.Size = UDim2.fromOffset(BUTTON_SIZE.X, BUTTON_SIZE.Y)
-    btn.BackgroundColor3 = Color3.fromRGB(25, 120, 220)
+    btn.BackgroundTransparency = 1
     btn.BorderSizePixel = 0
-    btn.Text = "Teleport"
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Text = labelText or "Teleport"
+    btn.TextColor3 = color or Color3.fromRGB(255, 255, 255)
     btn.TextSize = 12
     btn.Font = Enum.Font.GothamBold
     btn.Visible = false
     btn.ZIndex = 100
     btn.Parent = gui
 
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 6)
-    corner.Parent = btn
-
     btn.MouseButton1Click:Connect(function()
+        if not targetObj then
+            return
+        end
         Utils.teleportToTarget(targetObj)
     end)
 
@@ -126,25 +125,6 @@ function ESP.Add(obj, text, color, transparencyCheck)
 
     local visuals = {}
 
-    local bb = Instance.new("BillboardGui")
-    bb.Name = "ESP_Tag"
-    bb.Adornee = adornee
-    bb.Size = UDim2.new(0, 200, 0, 40)
-    bb.StudsOffset = Vector3.new(0, 2.5, 0)
-    bb.AlwaysOnTop = true
-    bb.Parent = obj
-
-    local lbl = Instance.new("TextLabel")
-    lbl.Size = UDim2.new(1, 0, 1, 0)
-    lbl.BackgroundTransparency = 1
-    lbl.Text = text
-    lbl.TextColor3 = color
-    lbl.TextStrokeTransparency = 0.5
-    lbl.Font = Enum.Font.GothamBold
-    lbl.TextSize = 14
-    lbl.Parent = bb
-    visuals.Billboard = bb
-
     local hl = Instance.new("Highlight")
     hl.FillColor = color
     hl.FillTransparency = 0.7
@@ -154,7 +134,7 @@ function ESP.Add(obj, text, color, transparencyCheck)
     visuals.Highlight = hl
 
     visuals.Adornee = adornee
-    visuals.TeleportButton = createTeleportButton(obj)
+    visuals.TeleportButton = createTeleportButton(obj, text, color)
 
     ESP.Objects[obj] = visuals
     ESP.Connections[obj] = {}
@@ -181,7 +161,6 @@ end
 -- Xóa ESP
 function ESP.Remove(obj)
     if ESP.Objects[obj] then
-        pcall(function() ESP.Objects[obj].Billboard:Destroy() end)
         pcall(function() ESP.Objects[obj].Highlight:Destroy() end)
         pcall(function()
             if ESP.Objects[obj].TeleportButton then
