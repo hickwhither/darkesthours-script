@@ -1,8 +1,8 @@
 -- Utils.lua
 local Utils = _G.offlineservice("Utils")
 
-local Workspace = _G.services.Workspace
-local Players = _G.services.Players
+local Workspace = game:GetService("Workspace")
+local Players = game:GetService("Players")
 
 function Utils.getPrimaryPart(target)
     if not target then

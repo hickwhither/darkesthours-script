@@ -105,8 +105,6 @@ local function createTeleportButton(targetObj, labelText, color)
     btn.Parent = gui
 
     btn.MouseButton1Click:Connect(function()
-        print(_G.Utils.teleportToTarget)
-        print(targetObj)
         _G.Utils.teleportToTarget(targetObj)
     end)
 
