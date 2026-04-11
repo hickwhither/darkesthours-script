@@ -1,21 +1,20 @@
 -- Fullbright.lua
 local Fullbright = _G.offlineservice("Fullbright")
 
-local Lighting = _G.services.Lighting
-
+local Lighting = game:GetService("Lighting")
 local connections = {}
+local originalLighting
 
 --------------------------------------------------
 -- UI REGISTER (giữ nguyên style của bạn)
 --------------------------------------------------
-_G.state.settings.Fullbright = false
 _G.UI.addEventHandler("Fullbright", function(state)
-    Fullbright.toggle(state)
+    Fullbright:toggle(state)
 end)
 _G.UI.addStopHandler(function()
-    if _G.state.settings.Fullbright then
+    if _G.UI.settings.Fullbright then
         pcall(function()
-            Fullbright.toggle(false)
+            Fullbright:toggle(false)
         end)
     end
 end)
@@ -24,9 +23,9 @@ end)
 -- save original
 --------------------------------------------------
 local function saveOriginal()
-    if _G.state.originalLighting then return end
+    if originalLighting then return end
 
-    _G.state.originalLighting = {
+    originalLighting = {
         Brightness = Lighting.Brightness,
         ClockTime = Lighting.ClockTime,
         FogEnd = Lighting.FogEnd,
@@ -63,12 +62,11 @@ local function connectLocks()
 
     for _, prop in ipairs(props) do
         local conn = Lighting:GetPropertyChangedSignal(prop):Connect(function()
-            if _G.state.settings.Fullbright then
+            if _G.UI.settings.Fullbright then
                 applyFullbright()
             end
         end)
         table.insert(connections, conn)
-        table.insert(_G.state.connections, conn)
     end
 end
 
@@ -82,8 +80,9 @@ end
 --------------------------------------------------
 -- TOGGLE
 --------------------------------------------------
-function Fullbright.toggle(enable)
+function Fullbright:toggle(enable)
     if enable then
+        disconnectLocks()
         saveOriginal()
         applyFullbright()
         connectLocks()
@@ -91,7 +90,7 @@ function Fullbright.toggle(enable)
         disconnectLocks()
 
         -- restore
-        local orig = _G.state.originalLighting
+        local orig = originalLighting
         if orig then
             pcall(function()
                 Lighting.Brightness = orig.Brightness
@@ -101,7 +100,7 @@ function Fullbright.toggle(enable)
                 Lighting.Ambient = orig.Ambient
                 Lighting.OutdoorAmbient = orig.OutdoorAmbient
             end)
-            _G.state.originalLighting = nil
+            originalLighting = nil
         end
     end
 end
