@@ -212,7 +212,7 @@ end, Color3.fromRGB(0, 255, 0))
 
 CreateTracker("Scrap", function()
     return workspace:FindFirstChild("Debris")
-end, Color3.fromRGB(200, 200, 200), function(child)
+end, Color3.fromRGB(242, 125, 0), function(child)
     local adornee = resolveAdornee(child)
     return adornee and adornee.Transparency == 0 and adornee.Name == "Scrap"
 end, true)
