@@ -1,12 +1,80 @@
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+
 local LocalPlayer = Players.LocalPlayer
+local Utils = _G.offlineservice("Utils")
 
 local ESP = {
     Objects = {},
     Connections = {},
     Trackers = {},
     Enabled = true,
+    ButtonGui = nil,
+    ButtonUpdateConnection = nil,
 }
+
+local BUTTON_SIZE = Vector2.new(70, 24)
+
+local function ensureButtonGui()
+    if ESP.ButtonGui and ESP.ButtonGui.Parent then
+        return ESP.ButtonGui
+    end
+
+    local playerGui = LocalPlayer:FindFirstChildOfClass("PlayerGui")
+    if not playerGui then
+        return nil
+    end
+
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "ESP_TeleportButtons"
+    gui.ResetOnSpawn = false
+    gui.IgnoreGuiInset = true
+    gui.Parent = playerGui
+
+    ESP.ButtonGui = gui
+    return gui
+end
+
+local function updateTeleportButtonPositions()
+    if not ESP.Enabled then return end
+
+    local camera = Workspace.CurrentCamera
+    if not camera then return end
+
+    for obj, visuals in pairs(ESP.Objects) do
+        local button = visuals.TeleportButton
+        local adornee = visuals.Adornee
+        if not button or not adornee then
+            continue
+        end
+
+        if not obj:IsDescendantOf(workspace) or not adornee:IsDescendantOf(workspace) then
+            button.Visible = false
+            continue
+        end
+
+        local viewportPos, onScreen = camera:WorldToViewportPoint(adornee.Position + Vector3.new(0, 4, 0))
+
+        if onScreen and viewportPos.Z > 0 then
+            button.Position = UDim2.fromOffset(
+                viewportPos.X - (BUTTON_SIZE.X / 2),
+                viewportPos.Y - (BUTTON_SIZE.Y / 2)
+            )
+            button.Visible = true
+        else
+            button.Visible = false
+        end
+    end
+end
+
+local function ensureButtonUpdater()
+    if ESP.ButtonUpdateConnection then
+        return
+    end
+
+    ESP.ButtonUpdateConnection = RunService.RenderStepped:Connect(updateTeleportButtonPositions)
+end
 
 -- Hàm xác định Part để gắn ESP
 local function resolveAdornee(target)
@@ -16,6 +84,36 @@ local function resolveAdornee(target)
             or target:FindFirstChild("ProxyPart")
             or target:FindFirstChildWhichIsA("BasePart")
     end
+end
+
+local function createTeleportButton(targetObj)
+    local gui = ensureButtonGui()
+    if not gui then
+        return nil
+    end
+
+    local btn = Instance.new("TextButton")
+    btn.Name = "ESP_Teleport"
+    btn.Size = UDim2.fromOffset(BUTTON_SIZE.X, BUTTON_SIZE.Y)
+    btn.BackgroundColor3 = Color3.fromRGB(25, 120, 220)
+    btn.BorderSizePixel = 0
+    btn.Text = "Teleport"
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.TextSize = 12
+    btn.Font = Enum.Font.GothamBold
+    btn.Visible = false
+    btn.ZIndex = 100
+    btn.Parent = gui
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 6)
+    corner.Parent = btn
+
+    btn.MouseButton1Click:Connect(function()
+        Utils.teleportToTarget(targetObj)
+    end)
+
+    return btn
 end
 
 -- Thêm ESP
@@ -55,6 +153,9 @@ function ESP.Add(obj, text, color, transparencyCheck)
     hl.Parent = obj
     visuals.Highlight = hl
 
+    visuals.Adornee = adornee
+    visuals.TeleportButton = createTeleportButton(obj)
+
     ESP.Objects[obj] = visuals
     ESP.Connections[obj] = {}
 
@@ -72,6 +173,9 @@ function ESP.Add(obj, text, color, transparencyCheck)
             end
         end))
     end
+
+    ensureButtonUpdater()
+    updateTeleportButtonPositions()
 end
 
 -- Xóa ESP
@@ -79,6 +183,11 @@ function ESP.Remove(obj)
     if ESP.Objects[obj] then
         pcall(function() ESP.Objects[obj].Billboard:Destroy() end)
         pcall(function() ESP.Objects[obj].Highlight:Destroy() end)
+        pcall(function()
+            if ESP.Objects[obj].TeleportButton then
+                ESP.Objects[obj].TeleportButton:Destroy()
+            end
+        end)
         ESP.Objects[obj] = nil
     end
 
@@ -108,6 +217,16 @@ function ESP.StopAll()
 
     for obj in pairs(ESP.Objects) do
         ESP.Remove(obj)
+    end
+
+    if ESP.ButtonUpdateConnection then
+        pcall(function() ESP.ButtonUpdateConnection:Disconnect() end)
+        ESP.ButtonUpdateConnection = nil
+    end
+
+    if ESP.ButtonGui then
+        pcall(function() ESP.ButtonGui:Destroy() end)
+        ESP.ButtonGui = nil
     end
 end
 
