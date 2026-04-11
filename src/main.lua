@@ -13,6 +13,7 @@ _G.class = fetch("pack/class.lua")
 _G.offlineservice = fetch("pack/offlineservice.lua")
 _G.running = true
 
+fetch("Utils.lua")
 fetch("UI.lua")
 fetch("ESP.lua")
 

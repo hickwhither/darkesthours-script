@@ -3,7 +3,6 @@ local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local LocalPlayer = Players.LocalPlayer
-local Utils = _G.offlineservice("Utils")
 
 local ESP = {
     Objects = {},
@@ -106,10 +105,9 @@ local function createTeleportButton(targetObj, labelText, color)
     btn.Parent = gui
 
     btn.MouseButton1Click:Connect(function()
-        if not targetObj then
-            return
-        end
-        Utils.teleportToTarget(targetObj)
+        print(_G.Utils.teleportToTarget)
+        print(targetObj)
+        _G.Utils.teleportToTarget(targetObj)
     end)
 
     return btn
