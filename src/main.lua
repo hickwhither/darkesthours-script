@@ -1,4 +1,4 @@
-local baseUrl = "https://raw.githubusercontent.com/hickwhither/my-new-pc/refs/heads/master/src/"
+local baseUrl = "https://github.com/hickwhither/darkesthours-script/raw/refs/heads/master/src/"
 
 local function fetch(name)
     print(baseUrl .. name)
