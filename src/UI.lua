@@ -11,6 +11,7 @@ UI.settings = {}
 UI.handlers = {}
 UI.stopHandlers = {}
 UI.buttonCount = 0
+UI._connections = {}
 
 -- References
 local screenGui, mainFrame, scrollingFrame
@@ -112,6 +113,12 @@ end
 local function stopScript()
     _G.running = false
     for _, fn in ipairs(UI.stopHandlers) do task.spawn(pcall, fn) end
+    for _, conn in ipairs(UI._connections) do
+        pcall(function()
+            conn:Disconnect()
+        end)
+    end
+    table.clear(UI._connections)
     if screenGui then screenGui:Destroy() end
 end
 
@@ -203,7 +210,7 @@ UI.createButton("Player", true)
 -- PHÍM TẮT
 ----------------------------------------------------------------
 
-UIS.InputBegan:Connect(function(input, gpe)
+table.insert(UI._connections, UIS.InputBegan:Connect(function(input, gpe)
     if gpe then return end
     if input.KeyCode == Enum.KeyCode.Backquote then
         if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then
@@ -212,6 +219,6 @@ UIS.InputBegan:Connect(function(input, gpe)
             toggleUI()
         end
     end
-end)
+end))
 
 print("✅ UI Loaded: [Backquote] để ẩn/hiện, [Ctrl + Backquote] để dừng.")

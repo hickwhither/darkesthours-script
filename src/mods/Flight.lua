@@ -40,7 +40,7 @@ end)
 
 _G.UI.addStopHandler(function()
     _G.UI.settings.Flight = false
-    Flight:toggle(false)
+    Flight:destroy()
 end)
 
 -- Main
@@ -248,6 +248,31 @@ local function bindCharacterReset()
             startFlight()
         end
     end)
+end
+
+local function unbindInput()
+    if inputBeganConnection then
+        inputBeganConnection:Disconnect()
+        inputBeganConnection = nil
+    end
+
+    if inputEndedConnection then
+        inputEndedConnection:Disconnect()
+        inputEndedConnection = nil
+    end
+end
+
+local function unbindCharacterReset()
+    if characterAddedConnection then
+        characterAddedConnection:Disconnect()
+        characterAddedConnection = nil
+    end
+end
+
+function Flight:destroy()
+    self:toggle(false)
+    unbindInput()
+    unbindCharacterReset()
 end
 
 function Flight:toggle(enabled)
