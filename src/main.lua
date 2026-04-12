@@ -21,5 +21,6 @@ fetch("mods/Fullbright.lua")
 fetch("mods/Flight.lua")
 fetch("mods/Speed.lua")
 fetch("mods/Noclip.lua")
+fetch("mods/ClickTP.lua")
 
 print("✅ Modules loaded from " .. baseUrl)
