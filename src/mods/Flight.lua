@@ -220,7 +220,7 @@ local function bindMovementInput()
         end
 
         local direction = movementKeys[input.KeyCode]
-        if direction and (_G.UI.settings.Flight or false) then
+        if direction then
             activeDirections[direction] = true
         end
     end)
