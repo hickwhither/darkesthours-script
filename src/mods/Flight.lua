@@ -10,8 +10,6 @@ _G.SWIM_FLY_SPEED = 110
 
 local localPlayer = Players.LocalPlayer
 local renderConnection
-local inputBeganConnection
-local inputEndedConnection
 local characterAddedConnection
 local flightController
 
@@ -104,6 +102,8 @@ local function updateFlightVelocity()
     if not flightController or not flightController.rootPart then
         return
     end
+
+    syncDirectionsFromCurrentInput()
 
     local camera = Workspace.CurrentCamera
     if not camera then
@@ -220,34 +220,6 @@ local function startFlight()
     return true
 end
 
-local function bindMovementInput()
-    if inputBeganConnection then
-        return
-    end
-
-    inputBeganConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
-        if gameProcessed or input.UserInputType ~= Enum.UserInputType.Keyboard then
-            return
-        end
-
-        local direction = movementKeys[input.KeyCode]
-        if direction then
-            activeDirections[direction] = true
-        end
-    end)
-
-    inputEndedConnection = UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType ~= Enum.UserInputType.Keyboard then
-            return
-        end
-
-        local direction = movementKeys[input.KeyCode]
-        if direction then
-            activeDirections[direction] = false
-        end
-    end)
-end
-
 local function bindCharacterReset()
     if characterAddedConnection or not localPlayer then
         return
@@ -261,18 +233,6 @@ local function bindCharacterReset()
     end)
 end
 
-local function unbindInput()
-    if inputBeganConnection then
-        inputBeganConnection:Disconnect()
-        inputBeganConnection = nil
-    end
-
-    if inputEndedConnection then
-        inputEndedConnection:Disconnect()
-        inputEndedConnection = nil
-    end
-end
-
 local function unbindCharacterReset()
     if characterAddedConnection then
         characterAddedConnection:Disconnect()
@@ -282,7 +242,6 @@ end
 
 function Flight:destroy()
     self:toggle(false)
-    unbindInput()
     unbindCharacterReset()
 end
 
@@ -295,5 +254,4 @@ function Flight:toggle(enabled)
     end
 end
 
-bindMovementInput()
 bindCharacterReset()
