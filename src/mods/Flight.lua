@@ -70,6 +70,16 @@ local function clearDirections()
     end
 end
 
+local function syncDirectionsFromCurrentInput()
+    clearDirections()
+
+    for keyCode, direction in pairs(movementKeys) do
+        if UserInputService:IsKeyDown(keyCode) then
+            activeDirections[direction] = true
+        end
+    end
+end
+
 local function destroyFlightController()
     if flightController then
         if flightController.bodyVelocity then
@@ -167,6 +177,7 @@ local function startFlight()
     end
 
     stopFlight()
+    syncDirectionsFromCurrentInput()
 
     local bodyVelocity = Instance.new("BodyVelocity")
     bodyVelocity.Name = "FlyBodyVelocity"
@@ -277,6 +288,7 @@ end
 
 function Flight:toggle(enabled)
     if enabled then
+        syncDirectionsFromCurrentInput()
         startFlight()
     else
         stopFlight()
