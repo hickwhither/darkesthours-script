@@ -54,14 +54,14 @@ local function refreshButtonVisibility()
     end
 end
 
-function UI.createButton(name, isToggle, defaultColor, category)
+function UI.createButton(name, isToggle, defaultColor, category, defaultState)
     if UI.settings[name] ~= nil then return end -- Tránh tạo trùng
 
     UI.buttonCount = UI.buttonCount + 1 -- Tăng số thứ tự mỗi khi tạo nút mới
     category = category or "General"
     
     -- Khởi tạo trạng thái nếu là toggle
-    if isToggle then UI.settings[name] = false end
+    if isToggle then UI.settings[name] = defaultState == true end
 
     local function getDisplayText()
         if isToggle then
@@ -270,12 +270,31 @@ UI.createButton("ClickTP", true, nil, "Movement")
 UI.createButton("Fullbright", true, nil, "Visual")
 UI.createButton("NoFog", true, nil, "Visual")
 
-UI.createButton("ESPTP", true, nil, "ESP")
 UI.createButton("CaptureThePoint", true, nil, "ESP")
 UI.createButton("Scrap", true, nil, "ESP")
 UI.createButton("Entities", true, nil, "ESP")
 UI.createButton("NPC", true, nil, "ESP")
 UI.createButton("Player", true, nil, "ESP")
+
+UI.createButton("CaptureThePoint_Highlight", true, nil, "ESP", true)
+UI.createButton("CaptureThePoint_Text", true, nil, "ESP", true)
+UI.createButton("CaptureThePoint_TP", true, nil, "ESP")
+
+UI.createButton("Scrap_Highlight", true, nil, "ESP", true)
+UI.createButton("Scrap_Text", true, nil, "ESP", true)
+UI.createButton("Scrap_TP", true, nil, "ESP")
+
+UI.createButton("Entities_Highlight", true, nil, "ESP", true)
+UI.createButton("Entities_Text", true, nil, "ESP", true)
+UI.createButton("Entities_TP", true, nil, "ESP")
+
+UI.createButton("NPC_Highlight", true, nil, "ESP", true)
+UI.createButton("NPC_Text", true, nil, "ESP", true)
+UI.createButton("NPC_TP", true, nil, "ESP")
+
+UI.createButton("Player_Highlight", true, nil, "ESP", true)
+UI.createButton("Player_Text", true, nil, "ESP", true)
+UI.createButton("Player_TP", true, nil, "ESP")
 
 ----------------------------------------------------------------
 -- PHÍM TẮT
