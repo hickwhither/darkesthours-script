@@ -156,10 +156,12 @@ function UI.createESPOptionRow(baseName, category)
             return Color3.fromRGB(45, 45, 45)
         end
 
+        local width = math.clamp(22 + (#label * 6), 40, 140)
+
         local btn = create("TextButton", {
             Name = buttonName,
             Parent = row,
-            Size = UDim2.new(0, 40, 1, 0),
+            Size = UDim2.new(0, width, 1, 0),
             BackgroundColor3 = getBtnColor(),
             BorderSizePixel = 0,
             Text = label,
@@ -193,6 +195,7 @@ function UI.createESPOptionRow(baseName, category)
 
     createInlineToggle(baseName .. "_Highlight", baseName, false)
     createInlineToggle(baseName .. "_TP", "TP", false)
+    createInlineToggle(baseName .. "_Line", "LINE", false)
 
     UI.buttonMeta[row.Name] = {
         button = row,

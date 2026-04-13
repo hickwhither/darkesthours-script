@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
+local UserInputService = game:GetService("UserInputService")
 
 local LocalPlayer = Players.LocalPlayer
 
@@ -9,89 +10,14 @@ local ESP = {
     Connections = {},
     Trackers = {},
     Enabled = true,
-    ButtonGui = nil,
-    ButtonUpdateConnection = nil,
+    RenderConnection = nil,
+    MiddleClickConnection = nil,
+    TPGui = nil,
 }
 
-local BUTTON_SIZE = Vector2.new(120, 24)
 local DEFAULT_FILL_TRANSPARENCY = 0.7
 local DEFAULT_OUTLINE_TRANSPARENCY = 0
 
-local function ensureButtonGui()
-    if ESP.ButtonGui and ESP.ButtonGui.Parent then
-        return ESP.ButtonGui
-    end
-
-    local playerGui = LocalPlayer:FindFirstChildOfClass("PlayerGui")
-    if not playerGui then
-        return nil
-    end
-
-    local gui = Instance.new("ScreenGui")
-    gui.Name = "ESP_TeleportButtons"
-    gui.ResetOnSpawn = false
-    gui.IgnoreGuiInset = true
-    gui.Parent = playerGui
-
-    ESP.ButtonGui = gui
-    return gui
-end
-
-local function updateTeleportButtonPositions()
-    if not ESP.Enabled then return end
-
-    local camera = Workspace.CurrentCamera
-    if not camera then return end
-
-    for obj, visuals in pairs(ESP.Objects) do
-        local button = visuals.TeleportButton
-        local adornee = visuals.Adornee
-        if not button or not adornee then
-            continue
-        end
-
-        if not obj:IsDescendantOf(workspace) or not adornee:IsDescendantOf(workspace) then
-            button.Visible = false
-            continue
-        end
-
-        local viewportPos, onScreen = camera:WorldToViewportPoint(adornee.Position + Vector3.new(0, 4, 0))
-
-        if onScreen and viewportPos.Z > 0 then
-            button.Position = UDim2.fromOffset(
-                viewportPos.X - (BUTTON_SIZE.X / 2),
-                viewportPos.Y - (BUTTON_SIZE.Y / 2)
-            )
-            button.Visible = true
-        else
-            button.Visible = false
-        end
-    end
-end
-
-local function clearTeleportButtonsFromGui()
-    if not ESP.ButtonGui then
-        return
-    end
-
-    for _, child in ipairs(ESP.ButtonGui:GetChildren()) do
-        if child:IsA("TextButton") and child.Name == "ESP_Teleport" then
-            pcall(function()
-                child:Destroy()
-            end)
-        end
-    end
-end
-
-local function ensureButtonUpdater()
-    if ESP.ButtonUpdateConnection then
-        return
-    end
-
-    ESP.ButtonUpdateConnection = RunService.RenderStepped:Connect(updateTeleportButtonPositions)
-end
-
--- Hàm xác định Part để gắn ESP
 local function resolveAdornee(target)
     if target:IsA("BasePart") then return target end
     if target:IsA("Model") then
@@ -101,33 +27,180 @@ local function resolveAdornee(target)
     end
 end
 
-local function createTeleportButton(targetObj, labelText, color)
-    local gui = ensureButtonGui()
-    if not gui then
+local function ensureTPGui()
+    if ESP.TPGui and ESP.TPGui.Parent then
+        return ESP.TPGui
+    end
+
+    local playerGui = LocalPlayer:FindFirstChildOfClass("PlayerGui")
+    if not playerGui then
         return nil
     end
 
-    local btn = Instance.new("TextButton")
-    btn.Name = "ESP_Teleport"
-    btn.Size = UDim2.fromOffset(BUTTON_SIZE.X, BUTTON_SIZE.Y)
-    btn.BackgroundTransparency = 1
-    btn.BorderSizePixel = 0
-    btn.Text = labelText or "Teleport"
-    btn.TextColor3 = color or Color3.fromRGB(255, 255, 255)
-    btn.TextSize = 12
-    btn.Font = Enum.Font.GothamBold
-    btn.Visible = false
-    btn.ZIndex = 100
-    btn.Parent = gui
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "ESP_TPLabels"
+    gui.ResetOnSpawn = false
+    gui.IgnoreGuiInset = true
+    gui.Parent = playerGui
 
-    btn.MouseButton1Click:Connect(function()
-        _G.Utils.teleportToTarget(targetObj)
-    end)
-
-    return btn
+    ESP.TPGui = gui
+    return gui
 end
 
--- Thêm ESP
+local function createTPLabel(adornee, color)
+    local gui = ensureTPGui()
+    if not gui or not adornee then
+        return nil
+    end
+
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "ESP_TP"
+    billboard.Size = UDim2.fromOffset(60, 20)
+    billboard.StudsOffset = Vector3.new(0, 3, 0)
+    billboard.AlwaysOnTop = true
+    billboard.Adornee = adornee
+    billboard.Enabled = false
+    billboard.Parent = gui
+
+    local text = Instance.new("TextLabel")
+    text.Name = "Label"
+    text.Size = UDim2.fromScale(1, 1)
+    text.BackgroundTransparency = 1
+    text.Text = "TP"
+    text.TextColor3 = color or Color3.new(1, 1, 1)
+    text.TextStrokeTransparency = 0.35
+    text.TextScaled = true
+    text.Font = Enum.Font.GothamBold
+    text.Parent = billboard
+
+    return billboard
+end
+
+local function createLine(color)
+    if not Drawing or not Drawing.new then
+        return nil
+    end
+
+    local line = Drawing.new("Line")
+    line.Visible = false
+    line.Color = color
+    line.Thickness = 1.5
+    line.Transparency = 1
+    return line
+end
+
+local function getLocalOriginPart()
+    local char = LocalPlayer and LocalPlayer.Character
+    if not char then
+        return nil
+    end
+
+    return char:FindFirstChild("HumanoidRootPart")
+        or char:FindFirstChild("Head")
+        or char:FindFirstChildWhichIsA("BasePart")
+end
+
+local function updateLineForObject(obj, visuals)
+    local line = visuals.Line
+    local adornee = visuals.Adornee
+    if not line then
+        return
+    end
+
+    line.Visible = false
+
+    if not ESP.Enabled or not visuals.Options.Line then
+        return
+    end
+
+    if not obj:IsDescendantOf(workspace) or not adornee or not adornee:IsDescendantOf(workspace) then
+        return
+    end
+
+    local camera = Workspace.CurrentCamera
+    local originPart = getLocalOriginPart()
+    if not camera or not originPart then
+        return
+    end
+
+    local from, fromOnScreen = camera:WorldToViewportPoint(originPart.Position)
+    local to, toOnScreen = camera:WorldToViewportPoint(adornee.Position)
+
+    if fromOnScreen and toOnScreen and from.Z > 0 and to.Z > 0 then
+        line.From = Vector2.new(from.X, from.Y)
+        line.To = Vector2.new(to.X, to.Y)
+        line.Visible = true
+    end
+end
+
+local function updateTPLabelForObject(obj, visuals)
+    local tpLabel = visuals.TPLabel
+    local adornee = visuals.Adornee
+    if not tpLabel then
+        return
+    end
+
+    local canShow = ESP.Enabled
+        and visuals.Options.TP
+        and obj:IsDescendantOf(workspace)
+        and adornee
+        and adornee:IsDescendantOf(workspace)
+
+    tpLabel.Adornee = adornee
+    tpLabel.Enabled = canShow and true or false
+end
+
+local function updateAllVisuals()
+    if not ESP.Enabled then return end
+
+    for obj, visuals in pairs(ESP.Objects) do
+        updateLineForObject(obj, visuals)
+        updateTPLabelForObject(obj, visuals)
+    end
+end
+
+local function ensureUpdater()
+    if ESP.RenderConnection then
+        return
+    end
+
+    ESP.RenderConnection = RunService.RenderStepped:Connect(updateAllVisuals)
+end
+
+local function tryTeleportByMouseTarget(targetPart)
+    if not targetPart then
+        return
+    end
+
+    for obj, visuals in pairs(ESP.Objects) do
+        if visuals.Options.TP and obj:IsDescendantOf(workspace) then
+            if targetPart == obj or targetPart:IsDescendantOf(obj) then
+                _G.Utils.teleportToTarget(obj)
+                return
+            end
+        end
+    end
+end
+
+local function ensureMiddleClickTeleport()
+    if ESP.MiddleClickConnection then
+        return
+    end
+
+    ESP.MiddleClickConnection = UserInputService.InputBegan:Connect(function(input, gpe)
+        if gpe or not ESP.Enabled then
+            return
+        end
+
+        if input.UserInputType ~= Enum.UserInputType.MouseButton3 then
+            return
+        end
+
+        local mouse = LocalPlayer:GetMouse()
+        tryTeleportByMouseTarget(mouse and mouse.Target)
+    end)
+end
+
 function ESP.Add(obj, text, color, transparencyCheck, options)
     if not ESP.Enabled then return end
     if not obj or ESP.Objects[obj] then return end
@@ -150,16 +223,13 @@ function ESP.Add(obj, text, color, transparencyCheck, options)
     visuals.Adornee = adornee
     visuals.Options = options or {
         Highlight = true,
-        Text = true,
         TP = false,
+        Line = false,
     }
-    visuals.TextGui = nil
-    visuals.TeleportButton = nil
+    visuals.Line = createLine(color)
+    visuals.TPLabel = createTPLabel(adornee, color)
 
     visuals.Highlight.Enabled = visuals.Options.Highlight
-    if visuals.Options.TP then
-        visuals.TeleportButton = createTeleportButton(obj, text, color)
-    end
 
     ESP.Objects[obj] = visuals
     ESP.Connections[obj] = {}
@@ -179,8 +249,10 @@ function ESP.Add(obj, text, color, transparencyCheck, options)
         end))
     end
 
-    ensureButtonUpdater()
-    updateTeleportButtonPositions()
+    ensureUpdater()
+    ensureMiddleClickTeleport()
+    updateLineForObject(obj, visuals)
+    updateTPLabelForObject(obj, visuals)
 end
 
 local function applyVisualOptionForObject(obj, optionName, enabled)
@@ -194,38 +266,35 @@ local function applyVisualOptionForObject(obj, optionName, enabled)
         visuals.Highlight.Enabled = visuals.Options.Highlight
         return
     end
-    
+
     if optionName == "TP" then
-        if visuals.Options.TP then
-            if not visuals.TeleportButton then
-                visuals.TeleportButton = createTeleportButton(obj, obj.Name, visuals.Highlight.FillColor)
-            end
-        else
-            if visuals.TeleportButton then
-                pcall(function() visuals.TeleportButton:Destroy() end)
-                visuals.TeleportButton = nil
-            end
-            clearTeleportButtonsFromGui()
-        end
-        updateTeleportButtonPositions()
+        updateTPLabelForObject(obj, visuals)
+        return
+    end
+
+    if optionName == "Line" then
+        updateLineForObject(obj, visuals)
         return
     end
 end
 
--- Xóa ESP
 function ESP.Remove(obj)
     if ESP.Objects[obj] then
-        pcall(function() ESP.Objects[obj].Highlight:Destroy() end)
+        local visuals = ESP.Objects[obj]
+
+        pcall(function() visuals.Highlight:Destroy() end)
         pcall(function()
-            if ESP.Objects[obj].TeleportButton then
-                ESP.Objects[obj].TeleportButton:Destroy()
+            if visuals.Line then
+                visuals.Line.Visible = false
+                visuals.Line:Remove()
             end
         end)
         pcall(function()
-            if ESP.Objects[obj].TextGui then
-                ESP.Objects[obj].TextGui:Destroy()
+            if visuals.TPLabel then
+                visuals.TPLabel:Destroy()
             end
         end)
+
         ESP.Objects[obj] = nil
     end
 
@@ -237,7 +306,6 @@ function ESP.Remove(obj)
     end
 end
 
--- Dừng toàn bộ
 function ESP.StopAll()
     ESP.Enabled = false
 
@@ -257,32 +325,31 @@ function ESP.StopAll()
         ESP.Remove(obj)
     end
 
-    if ESP.ButtonUpdateConnection then
-        pcall(function() ESP.ButtonUpdateConnection:Disconnect() end)
-        ESP.ButtonUpdateConnection = nil
+    if ESP.RenderConnection then
+        pcall(function() ESP.RenderConnection:Disconnect() end)
+        ESP.RenderConnection = nil
     end
 
-    if ESP.ButtonGui then
-        pcall(function() ESP.ButtonGui:Destroy() end)
-        ESP.ButtonGui = nil
+    if ESP.MiddleClickConnection then
+        pcall(function() ESP.MiddleClickConnection:Disconnect() end)
+        ESP.MiddleClickConnection = nil
+    end
+
+    if ESP.TPGui then
+        pcall(function() ESP.TPGui:Destroy() end)
+        ESP.TPGui = nil
     end
 end
 
--- Dọn dẹp
 function ESP.ClearAll()
     ESP.StopAll()
 end
 
 if _G.UI and _G.UI.addStopHandler then
     _G.UI.addStopHandler(function()
-        clearTeleportButtonsFromGui()
         ESP.ClearAll()
     end)
 end
-
---------------------------------------------------
--- HỆ THỐNG TRACKER (Hỗ trợ Đệ quy)
---------------------------------------------------
 
 local function CreateTracker(name, getFolderFunc, color, validateFunc, isScrap)
     local tracker = {
@@ -291,8 +358,8 @@ local function CreateTracker(name, getFolderFunc, color, validateFunc, isScrap)
         TrackedObjects = {},
         Options = {
             Highlight = false,
-            Text = false,
             TP = false,
+            Line = false,
         }
     }
     ESP.Trackers[name] = tracker
@@ -342,12 +409,8 @@ local function CreateTracker(name, getFolderFunc, color, validateFunc, isScrap)
     end
 
     local function startTracker()
-        if tracker.Enabled then
-            return
-        end
-        if not ESP.Enabled then
-            return
-        end
+        if tracker.Enabled then return end
+        if not ESP.Enabled then return end
 
         tracker.Enabled = true
         local root = getFolderFunc()
@@ -367,7 +430,7 @@ local function CreateTracker(name, getFolderFunc, color, validateFunc, isScrap)
     end
 
     local function refreshTrackerState()
-        local shouldEnable = tracker.Options.Highlight or tracker.Options.Text or tracker.Options.TP
+        local shouldEnable = tracker.Options.Highlight or tracker.Options.TP or tracker.Options.Line
         if shouldEnable then
             startTracker()
         else
@@ -395,24 +458,16 @@ local function CreateTracker(name, getFolderFunc, color, validateFunc, isScrap)
         refreshTrackerState()
     end)
 
-    _G.UI.addEventHandler(name .. "_Highlight", function(toggle)
-        tracker.Options.Highlight = toggle and true or false
-        for _, obj in ipairs(tracker.TrackedObjects) do
-            applyVisualOptionForObject(obj, "Highlight", tracker.Options.Highlight)
+    _G.UI.addEventHandler(name .. "_Line", function(toggle)
+        tracker.Options.Line = toggle and true or false
+        if tracker.Enabled then
+            for _, obj in ipairs(tracker.TrackedObjects) do
+                applyVisualOptionForObject(obj, "Line", tracker.Options.Line)
+            end
         end
-    end)
-
-    _G.UI.addEventHandler(name .. "_TP", function(toggle)
-        tracker.Options.TP = toggle and true or false
-        for _, obj in ipairs(tracker.TrackedObjects) do
-            applyVisualOptionForObject(obj, "TP", tracker.Options.TP)
-        end
+        refreshTrackerState()
     end)
 end
-
---------------------------------------------------
--- ĐĂNG KÝ
---------------------------------------------------
 
 CreateTracker("Entities", function()
     return workspace:FindFirstChild("Entities")
