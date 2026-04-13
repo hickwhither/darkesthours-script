@@ -146,18 +146,6 @@ function UI.createESPOptionRow(baseName, category)
         Parent = row
     })
 
-    local title = create("TextLabel", {
-        Name = baseName .. "_Label",
-        Parent = row,
-        Size = UDim2.new(0, 72, 1, 0),
-        BackgroundTransparency = 1,
-        Text = baseName,
-        TextColor3 = Color3.new(1, 1, 1),
-        Font = Enum.Font.GothamSemibold,
-        TextSize = 11,
-        TextXAlignment = Enum.TextXAlignment.Left,
-    })
-
     local function createInlineToggle(buttonName, label, defaultState)
         UI.settings[buttonName] = defaultState == true
 
@@ -203,7 +191,7 @@ function UI.createESPOptionRow(baseName, category)
         end)
     end
 
-    createInlineToggle(baseName .. "_Highlight", "HL", false)
+    createInlineToggle(baseName .. "_Highlight", baseName, false)
     createInlineToggle(baseName .. "_Text", "TXT", false)
     createInlineToggle(baseName .. "_TP", "TP", false)
 
@@ -246,8 +234,8 @@ screenGui = create("ScreenGui", {
 
 mainFrame = create("Frame", {
     Name = "MainFrame",
-    Size = UDim2.new(0, 220, 0, 320),
-    Position = UDim2.new(1, -240, 0.5, -160),
+    Size = UDim2.new(0, 250, 0, 320),
+    Position = UDim2.new(1, -270, 0.5, -160),
     BackgroundColor3 = Color3.fromRGB(25, 25, 25),
     Active = true,
     Draggable = true,
