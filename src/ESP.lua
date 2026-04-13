@@ -47,7 +47,7 @@ local function ensureTPGui()
     return gui
 end
 
-local function createTPLabel(adornee, text, color)
+local function createTPLabel(adornee, name, color)
     local gui = ensureTPGui()
     if not gui or not adornee then
         return nil
@@ -66,7 +66,7 @@ local function createTPLabel(adornee, text, color)
     text.Name = "Label"
     text.Size = UDim2.fromScale(1, 1)
     text.BackgroundTransparency = 1
-    text.Text = text
+    text.Text = name
     text.TextColor3 = color or Color3.new(1, 1, 1)
     text.TextStrokeTransparency = 0.35
     text.TextScaled = true
