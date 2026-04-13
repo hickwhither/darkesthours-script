@@ -47,7 +47,7 @@ local function ensureTPGui()
     return gui
 end
 
-local function createTPLabel(adornee, color)
+local function createTPLabel(adornee, text, color)
     local gui = ensureTPGui()
     if not gui or not adornee then
         return nil
@@ -66,7 +66,7 @@ local function createTPLabel(adornee, color)
     text.Name = "Label"
     text.Size = UDim2.fromScale(1, 1)
     text.BackgroundTransparency = 1
-    text.Text = "TP"
+    text.Text = text
     text.TextColor3 = color or Color3.new(1, 1, 1)
     text.TextStrokeTransparency = 0.35
     text.TextScaled = true
@@ -227,7 +227,7 @@ function ESP.Add(obj, text, color, transparencyCheck, options)
         Line = false,
     }
     visuals.Line = createLine(color)
-    visuals.TPLabel = createTPLabel(adornee, color)
+    visuals.TPLabel = createTPLabel(adornee, text, color)
 
     visuals.Highlight.Enabled = visuals.Options.Highlight
 
