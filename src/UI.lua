@@ -12,6 +12,8 @@ UI.handlers = {}
 UI.stopHandlers = {}
 UI.buttonCount = 0
 UI._connections = {}
+UI.buttonMeta = {}
+UI.activeCategory = "All"
 
 -- References
 local screenGui, mainFrame, scrollingFrame
@@ -46,10 +48,18 @@ function UI.addStopHandler(fn)
 end
 
 -- Hàm tạo nút chính
-function UI.createButton(name, isToggle, defaultColor)
+local function refreshButtonVisibility()
+    for _, meta in pairs(UI.buttonMeta) do
+        local isVisible = UI.activeCategory == "All" or meta.category == UI.activeCategory
+        meta.button.Visible = isVisible
+    end
+end
+
+function UI.createButton(name, isToggle, defaultColor, category)
     if UI.settings[name] ~= nil then return end -- Tránh tạo trùng
 
     UI.buttonCount = UI.buttonCount + 1 -- Tăng số thứ tự mỗi khi tạo nút mới
+    category = category or "General"
     
     -- Khởi tạo trạng thái nếu là toggle
     if isToggle then UI.settings[name] = false end
@@ -106,6 +116,12 @@ function UI.createButton(name, isToggle, defaultColor)
         end
     end)
 
+    UI.buttonMeta[name] = {
+        button = btn,
+        category = category
+    }
+
+    refreshButtonVisibility()
     return btn
 end
 
@@ -161,8 +177,8 @@ local title = create("TextLabel", {
 })
 
 scrollingFrame = create("ScrollingFrame", {
-    Size = UDim2.new(1, -20, 1, -100),
-    Position = UDim2.new(0, 10, 0, 45),
+    Size = UDim2.new(1, -20, 1, -135),
+    Position = UDim2.new(0, 10, 0, 80),
     BackgroundTransparency = 1,
     ScrollBarThickness = 2,
     CanvasSize = UDim2.new(0, 0, 0, 0),
@@ -176,6 +192,58 @@ create("UIListLayout", {
     SortOrder = Enum.SortOrder.LayoutOrder,
     Parent = scrollingFrame
 })
+
+local navBar = create("Frame", {
+    Size = UDim2.new(1, -20, 0, 30),
+    Position = UDim2.new(0, 10, 0, 45),
+    BackgroundTransparency = 1,
+    Parent = mainFrame
+})
+
+create("UIListLayout", {
+    FillDirection = Enum.FillDirection.Horizontal,
+    HorizontalAlignment = Enum.HorizontalAlignment.Left,
+    VerticalAlignment = Enum.VerticalAlignment.Center,
+    Padding = UDim.new(0, 6),
+    Parent = navBar
+})
+
+local categoryButtons = {}
+local categories = { "All", "Movement", "Visual", "ESP" }
+
+local function updateCategoryButtonStyles()
+    for categoryName, button in pairs(categoryButtons) do
+        local selected = categoryName == UI.activeCategory
+        button.BackgroundColor3 = selected
+            and Color3.fromRGB(46, 204, 113)
+            or Color3.fromRGB(45, 45, 45)
+    end
+end
+
+for _, categoryName in ipairs(categories) do
+    local categoryBtn = create("TextButton", {
+        Name = "Category_" .. categoryName,
+        Size = UDim2.new(0, 70, 1, 0),
+        BackgroundColor3 = Color3.fromRGB(45, 45, 45),
+        BorderSizePixel = 0,
+        Text = categoryName,
+        TextColor3 = Color3.new(1, 1, 1),
+        Font = Enum.Font.GothamSemibold,
+        TextSize = 11,
+        Parent = navBar
+    })
+
+    create("UICorner", { CornerRadius = UDim.new(0, 6), Parent = categoryBtn })
+    categoryBtn.MouseButton1Click:Connect(function()
+        UI.activeCategory = categoryName
+        updateCategoryButtonStyles()
+        refreshButtonVisibility()
+    end)
+
+    categoryButtons[categoryName] = categoryBtn
+end
+
+updateCategoryButtonStyles()
 
 -- Nút Stop phía dưới cùng
 local stopBtn = create("TextButton", {
@@ -195,16 +263,20 @@ stopBtn.MouseButton1Click:Connect(stopScript)
 -- TẠO CÁC NÚT THEO YÊU CẦU
 ----------------------------------------------------------------
 
-UI.createButton("Flight", true)
-UI.createButton("Fullbright", true)
-UI.createButton("Noclip", true)
-UI.createButton("Speed", true)
-UI.createButton("ClickTP", true)
-UI.createButton("CaptureThePoint", true)
-UI.createButton("Scrap", true)
-UI.createButton("Entities", true)
-UI.createButton("NPC", true)
-UI.createButton("Player", true)
+UI.createButton("Flight", true, nil, "Movement")
+UI.createButton("Noclip", true, nil, "Movement")
+UI.createButton("Speed", true, nil, "Movement")
+UI.createButton("ClickTP", true, nil, "Movement")
+
+UI.createButton("Fullbright", true, nil, "Visual")
+UI.createButton("NoFog", true, nil, "Visual")
+
+UI.createButton("ESPTP", true, nil, "ESP")
+UI.createButton("CaptureThePoint", true, nil, "ESP")
+UI.createButton("Scrap", true, nil, "ESP")
+UI.createButton("Entities", true, nil, "ESP")
+UI.createButton("NPC", true, nil, "ESP")
+UI.createButton("Player", true, nil, "ESP")
 
 ----------------------------------------------------------------
 -- PHÍM TẮT
