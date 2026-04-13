@@ -437,6 +437,27 @@ local function CreateTracker(name, getFolderFunc, color, validateFunc, isScrap)
         end
         refreshTrackerState()
     end)
+
+    _G.UI.addEventHandler(name .. "_Highlight", function(toggle)
+        tracker.Options.Highlight = toggle and true or false
+        for _, obj in ipairs(tracker.TrackedObjects) do
+            applyVisualOptionForObject(obj, "Highlight", tracker.Options.Highlight)
+        end
+    end)
+
+    _G.UI.addEventHandler(name .. "_Text", function(toggle)
+        tracker.Options.Text = toggle and true or false
+        for _, obj in ipairs(tracker.TrackedObjects) do
+            applyVisualOptionForObject(obj, "Text", tracker.Options.Text)
+        end
+    end)
+
+    _G.UI.addEventHandler(name .. "_TP", function(toggle)
+        tracker.Options.TP = toggle and true or false
+        for _, obj in ipairs(tracker.TrackedObjects) do
+            applyVisualOptionForObject(obj, "TP", tracker.Options.TP)
+        end
+    end)
 end
 
 --------------------------------------------------

@@ -13,7 +13,7 @@ UI.stopHandlers = {}
 UI.buttonCount = 0
 UI._connections = {}
 UI.buttonMeta = {}
-UI.activeCategory = "All"
+UI.activeCategory = "Movement"
 
 -- References
 local screenGui, mainFrame, scrollingFrame
@@ -50,8 +50,7 @@ end
 -- Hàm tạo nút chính
 local function refreshButtonVisibility()
     for _, meta in pairs(UI.buttonMeta) do
-        local isVisible = UI.activeCategory == "All" or meta.category == UI.activeCategory
-        meta.button.Visible = isVisible
+        meta.button.Visible = meta.category == UI.activeCategory
     end
 end
 
@@ -301,7 +300,7 @@ create("UIListLayout", {
 })
 
 local categoryButtons = {}
-local categories = { "All", "Movement", "Visual", "ESP" }
+local categories = { "Movement", "Visual", "ESP" }
 
 local function updateCategoryButtonStyles()
     for categoryName, button in pairs(categoryButtons) do
