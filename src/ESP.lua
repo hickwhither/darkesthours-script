@@ -9,6 +9,7 @@ local ESP = {
     Connections = {},
     Trackers = {},
     Enabled = true,
+    TeleportEnabled = false,
     ButtonGui = nil,
     ButtonUpdateConnection = nil,
 }
@@ -55,7 +56,7 @@ local function updateTeleportButtonPositions()
 
         local viewportPos, onScreen = camera:WorldToViewportPoint(adornee.Position + Vector3.new(0, 4, 0))
 
-        if onScreen and viewportPos.Z > 0 then
+        if ESP.TeleportEnabled and onScreen and viewportPos.Z > 0 then
             button.Position = UDim2.fromOffset(
                 viewportPos.X - (BUTTON_SIZE.X / 2),
                 viewportPos.Y - (BUTTON_SIZE.Y / 2)
@@ -86,6 +87,10 @@ local function resolveAdornee(target)
 end
 
 local function createTeleportButton(targetObj, labelText, color)
+    if not ESP.TeleportEnabled then
+        return nil
+    end
+
     local gui = ensureButtonGui()
     if not gui then
         return nil
@@ -105,6 +110,9 @@ local function createTeleportButton(targetObj, labelText, color)
     btn.Parent = gui
 
     btn.MouseButton1Click:Connect(function()
+        if not ESP.TeleportEnabled then
+            return
+        end
         _G.Utils.teleportToTarget(targetObj)
     end)
 
@@ -151,6 +159,27 @@ function ESP.Add(obj, text, color, transparencyCheck)
     end
 
     ensureButtonUpdater()
+    updateTeleportButtonPositions()
+end
+
+local function setTeleportButtonsEnabled(enabled)
+    ESP.TeleportEnabled = enabled and true or false
+
+    for obj, visuals in pairs(ESP.Objects) do
+        if ESP.TeleportEnabled then
+            if not visuals.TeleportButton then
+                visuals.TeleportButton = createTeleportButton(obj, obj.Name, visuals.Highlight.FillColor)
+            end
+        else
+            if visuals.TeleportButton then
+                pcall(function()
+                    visuals.TeleportButton:Destroy()
+                end)
+                visuals.TeleportButton = nil
+            end
+        end
+    end
+
     updateTeleportButtonPositions()
 end
 
@@ -212,6 +241,7 @@ end
 
 if _G.UI and _G.UI.addStopHandler then
     _G.UI.addStopHandler(function()
+        setTeleportButtonsEnabled(false)
         ESP.ClearAll()
     end)
 end
@@ -319,4 +349,11 @@ CreateTracker("Player", function()
     return workspace:FindFirstChild("Characters") and workspace.Characters:FindFirstChild("Player")
 end, Color3.fromRGB(50, 200, 255), function(child)
     return child:IsA("Model") and child.Name ~= Players.LocalPlayer.Name
+end)
+
+_G.UI.addEventHandler("ESPTP", function(toggle)
+    if not ESP.Enabled and toggle then
+        return
+    end
+    setTeleportButtonsEnabled(toggle)
 end)
