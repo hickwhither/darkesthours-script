@@ -1,3 +1,8 @@
+if _G.running then
+    return
+end
+_G.running = true
+
 local baseUrl = "https://github.com/hickwhither/darkesthours-script/raw/refs/heads/master/src/"
 
 local function fetch(name)
@@ -11,7 +16,6 @@ end
 
 _G.class = fetch("pack/class.lua")
 _G.offlineservice = fetch("pack/offlineservice.lua")
-_G.running = true
 
 fetch("Utils.lua")
 fetch("UI.lua")

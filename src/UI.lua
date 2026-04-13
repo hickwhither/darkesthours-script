@@ -111,7 +111,6 @@ end
 
 -- Dừng toàn bộ script
 local function stopScript()
-    _G.running = false
     for _, fn in ipairs(UI.stopHandlers) do task.spawn(pcall, fn) end
     for _, conn in ipairs(UI._connections) do
         pcall(function()
@@ -120,6 +119,7 @@ local function stopScript()
     end
     table.clear(UI._connections)
     if screenGui then screenGui:Destroy() end
+    _G.running = false
 end
 
 -- Đóng/Mở UI
