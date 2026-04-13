@@ -192,7 +192,6 @@ function UI.createESPOptionRow(baseName, category)
     end
 
     createInlineToggle(baseName .. "_Highlight", baseName, false)
-    createInlineToggle(baseName .. "_Text", "TXT", false)
     createInlineToggle(baseName .. "_TP", "TP", false)
 
     UI.buttonMeta[row.Name] = {

@@ -127,29 +127,6 @@ local function createTeleportButton(targetObj, labelText, color)
     return btn
 end
 
-local function createTextLabel(targetObj, labelText, color, adornee)
-    local gui = Instance.new("BillboardGui")
-    gui.Name = "ESP_Text"
-    gui.Size = UDim2.fromOffset(180, 26)
-    gui.StudsOffset = Vector3.new(0, 3, 0)
-    gui.AlwaysOnTop = true
-    gui.Adornee = adornee
-    gui.Parent = targetObj
-
-    local lbl = Instance.new("TextLabel")
-    lbl.Name = "Label"
-    lbl.BackgroundTransparency = 1
-    lbl.Size = UDim2.fromScale(1, 1)
-    lbl.Text = labelText or targetObj.Name
-    lbl.TextColor3 = color or Color3.fromRGB(255, 255, 255)
-    lbl.TextStrokeTransparency = 0.4
-    lbl.TextScaled = true
-    lbl.Font = Enum.Font.GothamBold
-    lbl.Parent = gui
-
-    return gui
-end
-
 -- Thêm ESP
 function ESP.Add(obj, text, color, transparencyCheck, options)
     if not ESP.Enabled then return end
@@ -180,9 +157,6 @@ function ESP.Add(obj, text, color, transparencyCheck, options)
     visuals.TeleportButton = nil
 
     visuals.Highlight.Enabled = visuals.Options.Highlight
-    if visuals.Options.Text then
-        visuals.TextGui = createTextLabel(obj, text, color, adornee)
-    end
     if visuals.Options.TP then
         visuals.TeleportButton = createTeleportButton(obj, text, color)
     end
@@ -218,18 +192,10 @@ local function applyVisualOptionForObject(obj, optionName, enabled)
 
     if optionName == "Highlight" and visuals.Highlight then
         visuals.Highlight.Enabled = visuals.Options.Highlight
-    elseif optionName == "Text" then
-        if visuals.Options.Text then
-            if not visuals.TextGui and visuals.Adornee then
-                visuals.TextGui = createTextLabel(obj, obj.Name, visuals.Highlight.FillColor, visuals.Adornee)
-            end
-        else
-            if visuals.TextGui then
-                pcall(function() visuals.TextGui:Destroy() end)
-                visuals.TextGui = nil
-            end
-        end
-    elseif optionName == "TP" then
+        return
+    end
+    
+    if optionName == "TP" then
         if visuals.Options.TP then
             if not visuals.TeleportButton then
                 visuals.TeleportButton = createTeleportButton(obj, obj.Name, visuals.Highlight.FillColor)
@@ -242,6 +208,7 @@ local function applyVisualOptionForObject(obj, optionName, enabled)
             clearTeleportButtonsFromGui()
         end
         updateTeleportButtonPositions()
+        return
     end
 end
 
@@ -418,16 +385,6 @@ local function CreateTracker(name, getFolderFunc, color, validateFunc, isScrap)
         refreshTrackerState()
     end)
 
-    _G.UI.addEventHandler(name .. "_Text", function(toggle)
-        tracker.Options.Text = toggle and true or false
-        if tracker.Enabled then
-            for _, obj in ipairs(tracker.TrackedObjects) do
-                applyVisualOptionForObject(obj, "Text", tracker.Options.Text)
-            end
-        end
-        refreshTrackerState()
-    end)
-
     _G.UI.addEventHandler(name .. "_TP", function(toggle)
         tracker.Options.TP = toggle and true or false
         if tracker.Enabled then
@@ -442,13 +399,6 @@ local function CreateTracker(name, getFolderFunc, color, validateFunc, isScrap)
         tracker.Options.Highlight = toggle and true or false
         for _, obj in ipairs(tracker.TrackedObjects) do
             applyVisualOptionForObject(obj, "Highlight", tracker.Options.Highlight)
-        end
-    end)
-
-    _G.UI.addEventHandler(name .. "_Text", function(toggle)
-        tracker.Options.Text = toggle and true or false
-        for _, obj in ipairs(tracker.TrackedObjects) do
-            applyVisualOptionForObject(obj, "Text", tracker.Options.Text)
         end
     end)
 
