@@ -124,6 +124,98 @@ function UI.createButton(name, isToggle, defaultColor, category, defaultState)
     return btn
 end
 
+function UI.createESPOptionRow(baseName, category)
+    category = category or "ESP"
+
+    UI.buttonCount = UI.buttonCount + 1
+    local rowOrder = UI.buttonCount
+
+    local row = create("Frame", {
+        Name = baseName .. "_OptionsRow",
+        Parent = scrollingFrame,
+        Size = UDim2.new(1, -10, 0, 32),
+        BackgroundTransparency = 1,
+        LayoutOrder = rowOrder
+    })
+
+    create("UIListLayout", {
+        FillDirection = Enum.FillDirection.Horizontal,
+        HorizontalAlignment = Enum.HorizontalAlignment.Center,
+        VerticalAlignment = Enum.VerticalAlignment.Center,
+        Padding = UDim.new(0, 6),
+        Parent = row
+    })
+
+    local title = create("TextLabel", {
+        Name = baseName .. "_Label",
+        Parent = row,
+        Size = UDim2.new(0, 72, 1, 0),
+        BackgroundTransparency = 1,
+        Text = baseName,
+        TextColor3 = Color3.new(1, 1, 1),
+        Font = Enum.Font.GothamSemibold,
+        TextSize = 11,
+        TextXAlignment = Enum.TextXAlignment.Left,
+    })
+
+    local function createInlineToggle(buttonName, label, defaultState)
+        UI.settings[buttonName] = defaultState == true
+
+        local function getBtnColor()
+            if UI.settings[buttonName] then
+                return Color3.fromRGB(46, 204, 113)
+            end
+            return Color3.fromRGB(45, 45, 45)
+        end
+
+        local btn = create("TextButton", {
+            Name = buttonName,
+            Parent = row,
+            Size = UDim2.new(0, 40, 1, 0),
+            BackgroundColor3 = getBtnColor(),
+            BorderSizePixel = 0,
+            Text = label,
+            TextColor3 = Color3.new(1, 1, 1),
+            Font = Enum.Font.GothamMedium,
+            TextSize = 11,
+            AutoButtonColor = true,
+        })
+
+        create("UICorner", { CornerRadius = UDim.new(0, 6), Parent = btn })
+        create("UIStroke", {
+            Thickness = 1,
+            Color = Color3.new(1, 1, 1),
+            Transparency = 0.8,
+            Parent = btn
+        })
+
+        btn.MouseButton1Click:Connect(function()
+            UI.settings[buttonName] = not UI.settings[buttonName]
+            btn.Text = label
+            btn.BackgroundColor3 = getBtnColor()
+
+            local list = UI.handlers[buttonName]
+            if list then
+                for _, fn in ipairs(list) do
+                    task.spawn(pcall, fn, UI.settings[buttonName])
+                end
+            end
+        end)
+    end
+
+    createInlineToggle(baseName .. "_Highlight", "HL", false)
+    createInlineToggle(baseName .. "_Text", "TXT", false)
+    createInlineToggle(baseName .. "_TP", "TP", false)
+
+    UI.buttonMeta[row.Name] = {
+        button = row,
+        category = category
+    }
+
+    refreshButtonVisibility()
+    return row
+end
+
 -- Dừng toàn bộ script
 local function stopScript()
     for _, fn in ipairs(UI.stopHandlers) do task.spawn(pcall, fn) end
@@ -270,31 +362,11 @@ UI.createButton("ClickTP", true, nil, "Movement")
 UI.createButton("Fullbright", true, nil, "Visual")
 UI.createButton("NoFog", true, nil, "Visual")
 
-UI.createButton("CaptureThePoint", true, nil, "ESP")
-UI.createButton("Scrap", true, nil, "ESP")
-UI.createButton("Entities", true, nil, "ESP")
-UI.createButton("NPC", true, nil, "ESP")
-UI.createButton("Player", true, nil, "ESP")
-
-UI.createButton("CaptureThePoint_Highlight", true, nil, "ESP", true)
-UI.createButton("CaptureThePoint_Text", true, nil, "ESP", true)
-UI.createButton("CaptureThePoint_TP", true, nil, "ESP")
-
-UI.createButton("Scrap_Highlight", true, nil, "ESP", true)
-UI.createButton("Scrap_Text", true, nil, "ESP", true)
-UI.createButton("Scrap_TP", true, nil, "ESP")
-
-UI.createButton("Entities_Highlight", true, nil, "ESP", true)
-UI.createButton("Entities_Text", true, nil, "ESP", true)
-UI.createButton("Entities_TP", true, nil, "ESP")
-
-UI.createButton("NPC_Highlight", true, nil, "ESP", true)
-UI.createButton("NPC_Text", true, nil, "ESP", true)
-UI.createButton("NPC_TP", true, nil, "ESP")
-
-UI.createButton("Player_Highlight", true, nil, "ESP", true)
-UI.createButton("Player_Text", true, nil, "ESP", true)
-UI.createButton("Player_TP", true, nil, "ESP")
+UI.createESPOptionRow("CaptureThePoint", "ESP")
+UI.createESPOptionRow("Scrap", "ESP")
+UI.createESPOptionRow("Entities", "ESP")
+UI.createESPOptionRow("NPC", "ESP")
+UI.createESPOptionRow("Player", "ESP")
 
 ----------------------------------------------------------------
 -- PHÍM TẮT

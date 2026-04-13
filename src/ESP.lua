@@ -323,8 +323,8 @@ local function CreateTracker(name, getFolderFunc, color, validateFunc, isScrap)
         ActiveConnections = {},
         TrackedObjects = {},
         Options = {
-            Highlight = true,
-            Text = true,
+            Highlight = false,
+            Text = false,
             TP = false,
         }
     }
@@ -360,37 +360,82 @@ local function CreateTracker(name, getFolderFunc, color, validateFunc, isScrap)
         table.insert(tracker.ActiveConnections, conn)
     end
 
-    _G.UI.addEventHandler(name, function(toggle)
-        if not ESP.Enabled and toggle then
+    local function stopTracker()
+        tracker.Enabled = false
+
+        for _, conn in ipairs(tracker.ActiveConnections) do
+            pcall(function() conn:Disconnect() end)
+        end
+        table.clear(tracker.ActiveConnections)
+
+        for _, obj in ipairs(tracker.TrackedObjects) do
+            ESP.Remove(obj)
+        end
+        table.clear(tracker.TrackedObjects)
+    end
+
+    local function startTracker()
+        if tracker.Enabled then
+            return
+        end
+        if not ESP.Enabled then
             return
         end
 
-        if toggle then
-            tracker.Enabled = true
-            local root = getFolderFunc()
-            if not root then return end
-
-            recursiveTrack(root, function(child)
-                if not ESP.Enabled or not tracker.Enabled then return end
-
-                if not validateFunc or validateFunc(child) then
-                    ESP.Add(child, child.Name, color, isScrap, tracker.Options)
-                    table.insert(tracker.TrackedObjects, child)
-                end
-            end)
-        else
+        tracker.Enabled = true
+        local root = getFolderFunc()
+        if not root then
             tracker.Enabled = false
-
-            for _, conn in ipairs(tracker.ActiveConnections) do
-                pcall(function() conn:Disconnect() end)
-            end
-            table.clear(tracker.ActiveConnections)
-
-            for _, obj in ipairs(tracker.TrackedObjects) do
-                ESP.Remove(obj)
-            end
-            table.clear(tracker.TrackedObjects)
+            return
         end
+
+        recursiveTrack(root, function(child)
+            if not ESP.Enabled or not tracker.Enabled then return end
+
+            if not validateFunc or validateFunc(child) then
+                ESP.Add(child, child.Name, color, isScrap, tracker.Options)
+                table.insert(tracker.TrackedObjects, child)
+            end
+        end)
+    end
+
+    local function refreshTrackerState()
+        local shouldEnable = tracker.Options.Highlight or tracker.Options.Text or tracker.Options.TP
+        if shouldEnable then
+            startTracker()
+        else
+            stopTracker()
+        end
+    end
+
+    _G.UI.addEventHandler(name .. "_Highlight", function(toggle)
+        tracker.Options.Highlight = toggle and true or false
+        if tracker.Enabled then
+            for _, obj in ipairs(tracker.TrackedObjects) do
+                applyVisualOptionForObject(obj, "Highlight", tracker.Options.Highlight)
+            end
+        end
+        refreshTrackerState()
+    end)
+
+    _G.UI.addEventHandler(name .. "_Text", function(toggle)
+        tracker.Options.Text = toggle and true or false
+        if tracker.Enabled then
+            for _, obj in ipairs(tracker.TrackedObjects) do
+                applyVisualOptionForObject(obj, "Text", tracker.Options.Text)
+            end
+        end
+        refreshTrackerState()
+    end)
+
+    _G.UI.addEventHandler(name .. "_TP", function(toggle)
+        tracker.Options.TP = toggle and true or false
+        if tracker.Enabled then
+            for _, obj in ipairs(tracker.TrackedObjects) do
+                applyVisualOptionForObject(obj, "TP", tracker.Options.TP)
+            end
+        end
+        refreshTrackerState()
     end)
 
     _G.UI.addEventHandler(name .. "_Highlight", function(toggle)
