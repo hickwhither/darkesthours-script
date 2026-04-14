@@ -123,14 +123,27 @@ local function updateLineForObject(obj, visuals)
         return
     end
 
+    local viewportSize = camera.ViewportSize
     local from, fromOnScreen = camera:WorldToViewportPoint(originPart.Position)
-    local to, toOnScreen = camera:WorldToViewportPoint(adornee.Position)
+    local to = camera:WorldToViewportPoint(adornee.Position)
 
-    if fromOnScreen and toOnScreen and from.Z > 0 and to.Z > 0 then
-        line.From = Vector2.new(from.X, from.Y)
-        line.To = Vector2.new(to.X, to.Y)
-        line.Visible = true
+    if from.Z <= 0 or to.Z <= 0 then
+        return
     end
+
+    local function clampToViewport(v)
+        return Vector2.new(
+            math.clamp(v.X, 0, viewportSize.X),
+            math.clamp(v.Y, 0, viewportSize.Y)
+        )
+    end
+
+    local startPoint = fromOnScreen and Vector2.new(from.X, from.Y) or Vector2.new(viewportSize.X * 0.5, viewportSize.Y)
+    local endPoint = clampToViewport(Vector2.new(to.X, to.Y))
+
+    line.From = startPoint
+    line.To = endPoint
+    line.Visible = true
 end
 
 local function updateTPLabelForObject(obj, visuals)
