@@ -100,6 +100,39 @@ local function getLocalOriginPart()
         or char:FindFirstChildWhichIsA("BasePart")
 end
 
+local function isTargetVisibleToCamera(camera, targetPart, targetRoot)
+    if not camera or not targetPart then
+        return false
+    end
+
+    local origin = camera.CFrame.Position
+    local direction = targetPart.Position - origin
+    if direction.Magnitude <= 0 then
+        return false
+    end
+
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Exclude
+
+    local excludeList = {}
+    local localChar = LocalPlayer and LocalPlayer.Character
+    if localChar then
+        table.insert(excludeList, localChar)
+    end
+
+    params.FilterDescendantsInstances = excludeList
+
+    local result = Workspace:Raycast(origin, direction, params)
+    if not result then
+        return true
+    end
+
+    local hit = result.Instance
+    return (targetRoot and hit:IsDescendantOf(targetRoot))
+        or hit == targetPart
+        or hit:IsDescendantOf(targetPart)
+end
+
 local function updateLineForObject(obj, visuals)
     local line = visuals.Line
     local adornee = visuals.Adornee
@@ -126,7 +159,12 @@ local function updateLineForObject(obj, visuals)
     local from, fromOnScreen = camera:WorldToViewportPoint(originPart.Position)
     local to, toOnScreen = camera:WorldToViewportPoint(adornee.Position)
 
-    if fromOnScreen and toOnScreen and from.Z > 0 and to.Z > 0 then
+    if fromOnScreen
+        and toOnScreen
+        and from.Z > 0
+        and to.Z > 0
+        and isTargetVisibleToCamera(camera, adornee, obj)
+    then
         line.From = Vector2.new(from.X, from.Y)
         line.To = Vector2.new(to.X, to.Y)
         line.Visible = true
