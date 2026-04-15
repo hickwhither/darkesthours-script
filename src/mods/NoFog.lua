@@ -3,6 +3,7 @@ local NoFog = _G.offlineservice("NoFog")
 local Lighting = game:GetService("Lighting")
 local connections = {}
 local originalFogEnd
+local originalFogStart
 
 local function disconnectLocks()
     for _, c in ipairs(connections) do
@@ -14,7 +15,8 @@ local function disconnectLocks()
 end
 
 local function applyNoFog()
-    Lighting.FogEnd = 1e10
+    Lighting.FogEnd = 100000
+    Lighting.FogStart = 99000
 end
 
 function NoFog:toggle(enable)
@@ -24,10 +26,18 @@ function NoFog:toggle(enable)
         if originalFogEnd == nil then
             originalFogEnd = Lighting.FogEnd
         end
+        if originalFogStart == nil then
+            originalFogStart = Lighting.FogStart
+        end
 
         applyNoFog()
 
         table.insert(connections, Lighting:GetPropertyChangedSignal("FogEnd"):Connect(function()
+            if _G.UI.settings.NoFog then
+                applyNoFog()
+            end
+        end))
+        table.insert(connections, Lighting:GetPropertyChangedSignal("FogStart"):Connect(function()
             if _G.UI.settings.NoFog then
                 applyNoFog()
             end
@@ -40,6 +50,12 @@ function NoFog:toggle(enable)
                 Lighting.FogEnd = originalFogEnd
             end)
             originalFogEnd = nil
+        end
+        if originalFogStart ~= nil then
+            pcall(function()
+                Lighting.FogStart = originalFogStart
+            end)
+            originalFogStart = nil
         end
     end
 end
