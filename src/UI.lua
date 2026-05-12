@@ -231,7 +231,7 @@ end
 screenGui = create("ScreenGui", {
     Name = "Internal_UI",
     ResetOnSpawn = false,
-    Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+    Parent = CoreGui
 })
 
 mainFrame = create("Frame", {

@@ -2,6 +2,8 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local UserInputService = game:GetService("UserInputService")
+local CoreGui = game:GetService("CoreGui")
+
 
 local LocalPlayer = Players.LocalPlayer
 
@@ -32,16 +34,16 @@ local function ensureTPGui()
         return ESP.TPGui
     end
 
-    local playerGui = LocalPlayer:FindFirstChildOfClass("PlayerGui")
-    if not playerGui then
-        return nil
-    end
+    -- local playerGui = LocalPlayer:FindFirstChildOfClass("PlayerGui")
+    -- if not playerGui then
+    --     return nil
+    -- end
 
     local gui = Instance.new("ScreenGui")
     gui.Name = "ESP_TPLabels"
     gui.ResetOnSpawn = false
     gui.IgnoreGuiInset = true
-    gui.Parent = playerGui
+    gui.Parent = CoreGui
 
     ESP.TPGui = gui
     return gui
