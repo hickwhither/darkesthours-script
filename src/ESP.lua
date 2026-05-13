@@ -21,8 +21,12 @@ local DEFAULT_FILL_TRANSPARENCY = 0.7
 local DEFAULT_OUTLINE_TRANSPARENCY = 0
 local FADED_FILL_TRANSPARENCY = 0.88
 local FADED_OUTLINE_TRANSPARENCY = 0.35
-local TRANSPARENCY_REMOVE = "remove"
-local TRANSPARENCY_FADE = "fade"
+local DEFAULT_LINE_TRANSPARENCY = 1
+local FADED_LINE_TRANSPARENCY = 0.35
+local DEFAULT_LABEL_TRANSPARENCY = 0
+local FADED_LABEL_TRANSPARENCY = 0.45
+local DEFAULT_LABEL_STROKE_TRANSPARENCY = 0.35
+local FADED_LABEL_STROKE_TRANSPARENCY = 0.75
 
 local function resolveAdornee(target)
     if target:IsA("BasePart") then return target end
@@ -33,23 +37,22 @@ local function resolveAdornee(target)
     end
 end
 
-local function getHighestTransparency(target)
+local function hasVisibleTransparency(target)
     if not target then
-        return 0
+        return false
     end
 
-    if target:IsA("BasePart") then
-        return target.Transparency
+    if target:IsA("BasePart") and target.Transparency > 0 then
+        return true
     end
 
-    local highestTransparency = 0
     for _, descendant in ipairs(target:GetDescendants()) do
-        if descendant:IsA("BasePart") then
-            highestTransparency = math.max(highestTransparency, descendant.Transparency)
+        if descendant:IsA("BasePart") and descendant.Transparency > 0 then
+            return true
         end
     end
 
-    return highestTransparency
+    return false
 end
 
 local function setHighlightTransparency(highlight, fillTransparency, outlineTransparency)
@@ -59,6 +62,33 @@ local function setHighlightTransparency(highlight, fillTransparency, outlineTran
 
     highlight.FillTransparency = fillTransparency
     highlight.OutlineTransparency = outlineTransparency
+end
+
+local function setTPLabelTransparency(tpLabel, textTransparency, strokeTransparency)
+    local text = tpLabel and tpLabel:FindFirstChild("Label")
+    if not text then
+        return
+    end
+
+    text.TextTransparency = textTransparency
+    text.TextStrokeTransparency = strokeTransparency
+end
+
+local function setVisualFade(visuals, faded)
+    if faded then
+        setHighlightTransparency(visuals.Highlight, FADED_FILL_TRANSPARENCY, FADED_OUTLINE_TRANSPARENCY)
+        if visuals.Line then
+            visuals.Line.Transparency = FADED_LINE_TRANSPARENCY
+        end
+        setTPLabelTransparency(visuals.TPLabel, FADED_LABEL_TRANSPARENCY, FADED_LABEL_STROKE_TRANSPARENCY)
+        return
+    end
+
+    setHighlightTransparency(visuals.Highlight, DEFAULT_FILL_TRANSPARENCY, DEFAULT_OUTLINE_TRANSPARENCY)
+    if visuals.Line then
+        visuals.Line.Transparency = DEFAULT_LINE_TRANSPARENCY
+    end
+    setTPLabelTransparency(visuals.TPLabel, DEFAULT_LABEL_TRANSPARENCY, DEFAULT_LABEL_STROKE_TRANSPARENCY)
 end
 
 local function ensureTPGui()
@@ -102,7 +132,7 @@ local function createTPLabel(adornee, name, color)
     text.BackgroundTransparency = 1
     text.Text = name
     text.TextColor3 = color or Color3.new(1, 1, 1)
-    text.TextStrokeTransparency = 0.35
+    text.TextStrokeTransparency = DEFAULT_LABEL_STROKE_TRANSPARENCY
     text.TextScaled = true
     text.Font = Enum.Font.GothamBold
     text.Parent = billboard
@@ -119,7 +149,7 @@ local function createLine(color)
     line.Visible = false
     line.Color = color
     line.Thickness = 1.5
-    line.Transparency = 1
+    line.Transparency = DEFAULT_LINE_TRANSPARENCY
     return line
 end
 
@@ -248,7 +278,7 @@ local function ensureMiddleClickTeleport()
     end)
 end
 
-function ESP.Add(obj, text, color, transparencyMode, options)
+function ESP.Add(obj, text, color, behavior, options)
     if not ESP.Enabled then return end
     if not obj or ESP.Objects[obj] then return end
 
@@ -287,14 +317,38 @@ function ESP.Add(obj, text, color, transparencyMode, options)
         end
     end))
 
-    local function applyTransparencyMode()
+    behavior = behavior or {}
+
+    local function applyTransparencyBehavior()
         if not ESP.Enabled or not ESP.Objects[obj] then return end
 
-        local highestTransparency = getHighestTransparency(obj)
+        local transparent = hasVisibleTransparency(obj)
 
-        if transparencyMode == TRANSPARENCY_REMOVE then
-            if highestTransparency > 0 then
-                ESP.Remove(obj)
+        if behavior.RemoveWhenTransparent and transparent then
+            ESP.Remove(obj)
+            return
+        end
+
+        if behavior.FadeWhenTransparent then
+            setVisualFade(visuals, transparent)
+        end
+    end
+
+    if behavior.RemoveWhenTransparent or behavior.FadeWhenTransparent then
+        for _, descendant in ipairs(obj:GetDescendants()) do
+            if descendant:IsA("BasePart") then
+                table.insert(ESP.Connections[obj], descendant:GetPropertyChangedSignal("Transparency"):Connect(applyTransparencyBehavior))
+            end
+        end
+
+        if obj:IsA("BasePart") then
+            table.insert(ESP.Connections[obj], obj:GetPropertyChangedSignal("Transparency"):Connect(applyTransparencyBehavior))
+        end
+
+        table.insert(ESP.Connections[obj], obj.DescendantAdded:Connect(function(descendant)
+            if descendant:IsA("BasePart") then
+                table.insert(ESP.Connections[obj], descendant:GetPropertyChangedSignal("Transparency"):Connect(applyTransparencyBehavior))
+                applyTransparencyBehavior()
             end
             return
         end
@@ -326,7 +380,7 @@ function ESP.Add(obj, text, color, transparencyMode, options)
             end
         end))
 
-        applyTransparencyMode()
+        applyTransparencyBehavior()
     end
 
     ensureUpdater()
@@ -431,7 +485,7 @@ if _G.UI and _G.UI.addStopHandler then
     end)
 end
 
-local function CreateTracker(name, getFolderFunc, color, validateFunc, transparencyMode)
+local function CreateTracker(name, getFolderFunc, color, validateFunc, behavior)
     local tracker = {
         Enabled = false,
         ActiveConnections = {},
@@ -495,7 +549,7 @@ local function CreateTracker(name, getFolderFunc, color, validateFunc, transpare
             return
         end
 
-        ESP.Add(child, child.Name, color, transparencyMode, tracker.Options)
+        ESP.Add(child, child.Name, color, behavior, tracker.Options)
 
         if ESP.Objects[child] then
             tracker.TrackedSet[child] = true
@@ -576,7 +630,7 @@ CreateTracker("Scrap", function()
 end, Color3.fromRGB(242, 125, 0), function(child)
     local adornee = resolveAdornee(child)
     return adornee and adornee.Transparency == 0 and adornee.Name == "Scrap"
-end, TRANSPARENCY_REMOVE)
+end, { RemoveWhenTransparent = true })
 
 CreateTracker("NPC", function()
     return workspace:FindFirstChild("Characters") and workspace.Characters:FindFirstChild("NPC")
@@ -586,4 +640,4 @@ CreateTracker("Player", function()
     return workspace:FindFirstChild("Characters") and workspace.Characters:FindFirstChild("Player")
 end, Color3.fromRGB(50, 200, 255), function(child)
     return child:IsA("Model") and child.Name ~= Players.LocalPlayer.Name
-end, TRANSPARENCY_FADE)
+end, { FadeWhenTransparent = true })
