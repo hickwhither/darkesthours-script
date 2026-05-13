@@ -19,6 +19,10 @@ local ESP = {
 
 local DEFAULT_FILL_TRANSPARENCY = 0.7
 local DEFAULT_OUTLINE_TRANSPARENCY = 0
+local FADED_FILL_TRANSPARENCY = 0.88
+local FADED_OUTLINE_TRANSPARENCY = 0.35
+local TRANSPARENCY_REMOVE = "remove"
+local TRANSPARENCY_FADE = "fade"
 
 local function resolveAdornee(target)
     if target:IsA("BasePart") then return target end
@@ -27,6 +31,34 @@ local function resolveAdornee(target)
             or target:FindFirstChild("ProxyPart")
             or target:FindFirstChildWhichIsA("BasePart")
     end
+end
+
+local function getHighestTransparency(target)
+    if not target then
+        return 0
+    end
+
+    if target:IsA("BasePart") then
+        return target.Transparency
+    end
+
+    local highestTransparency = 0
+    for _, descendant in ipairs(target:GetDescendants()) do
+        if descendant:IsA("BasePart") then
+            highestTransparency = math.max(highestTransparency, descendant.Transparency)
+        end
+    end
+
+    return highestTransparency
+end
+
+local function setHighlightTransparency(highlight, fillTransparency, outlineTransparency)
+    if not highlight then
+        return
+    end
+
+    highlight.FillTransparency = fillTransparency
+    highlight.OutlineTransparency = outlineTransparency
 end
 
 local function ensureTPGui()
@@ -216,7 +248,7 @@ local function ensureMiddleClickTeleport()
     end)
 end
 
-function ESP.Add(obj, text, color, transparencyCheck, options)
+function ESP.Add(obj, text, color, transparencyMode, options)
     if not ESP.Enabled then return end
     if not obj or ESP.Objects[obj] then return end
 
@@ -255,13 +287,46 @@ function ESP.Add(obj, text, color, transparencyCheck, options)
         end
     end))
 
-    if transparencyCheck and adornee:IsA("BasePart") then
-        table.insert(ESP.Connections[obj], adornee:GetPropertyChangedSignal("Transparency"):Connect(function()
-            if not ESP.Enabled then return end
-            if adornee.Transparency ~= 0 then
+    local function applyTransparencyMode()
+        if not ESP.Enabled or not ESP.Objects[obj] then return end
+
+        local highestTransparency = getHighestTransparency(obj)
+
+        if transparencyMode == TRANSPARENCY_REMOVE then
+            if highestTransparency > 0 then
                 ESP.Remove(obj)
             end
+            return
+        end
+
+        if transparencyMode == TRANSPARENCY_FADE then
+            if highestTransparency > 0 then
+                setHighlightTransparency(visuals.Highlight, FADED_FILL_TRANSPARENCY, FADED_OUTLINE_TRANSPARENCY)
+            else
+                setHighlightTransparency(visuals.Highlight, DEFAULT_FILL_TRANSPARENCY, DEFAULT_OUTLINE_TRANSPARENCY)
+            end
+        end
+    end
+
+    if transparencyMode then
+        for _, descendant in ipairs(obj:GetDescendants()) do
+            if descendant:IsA("BasePart") then
+                table.insert(ESP.Connections[obj], descendant:GetPropertyChangedSignal("Transparency"):Connect(applyTransparencyMode))
+            end
+        end
+
+        if obj:IsA("BasePart") then
+            table.insert(ESP.Connections[obj], obj:GetPropertyChangedSignal("Transparency"):Connect(applyTransparencyMode))
+        end
+
+        table.insert(ESP.Connections[obj], obj.DescendantAdded:Connect(function(descendant)
+            if descendant:IsA("BasePart") then
+                table.insert(ESP.Connections[obj], descendant:GetPropertyChangedSignal("Transparency"):Connect(applyTransparencyMode))
+                applyTransparencyMode()
+            end
         end))
+
+        applyTransparencyMode()
     end
 
     ensureUpdater()
@@ -366,11 +431,12 @@ if _G.UI and _G.UI.addStopHandler then
     end)
 end
 
-local function CreateTracker(name, getFolderFunc, color, validateFunc, isScrap)
+local function CreateTracker(name, getFolderFunc, color, validateFunc, transparencyMode)
     local tracker = {
         Enabled = false,
         ActiveConnections = {},
         TrackedObjects = {},
+        TrackedSet = {},
         Options = {
             Highlight = false,
             TP = false,
@@ -421,6 +487,20 @@ local function CreateTracker(name, getFolderFunc, color, validateFunc, isScrap)
             ESP.Remove(obj)
         end
         table.clear(tracker.TrackedObjects)
+        table.clear(tracker.TrackedSet)
+    end
+
+    local function trackObject(child)
+        if tracker.TrackedSet[child] then
+            return
+        end
+
+        ESP.Add(child, child.Name, color, transparencyMode, tracker.Options)
+
+        if ESP.Objects[child] then
+            tracker.TrackedSet[child] = true
+            table.insert(tracker.TrackedObjects, child)
+        end
     end
 
     local function startTracker()
@@ -438,8 +518,7 @@ local function CreateTracker(name, getFolderFunc, color, validateFunc, isScrap)
             if not ESP.Enabled or not tracker.Enabled then return end
 
             if not validateFunc or validateFunc(child) then
-                ESP.Add(child, child.Name, color, isScrap, tracker.Options)
-                table.insert(tracker.TrackedObjects, child)
+                trackObject(child)
             end
         end)
     end
@@ -497,7 +576,7 @@ CreateTracker("Scrap", function()
 end, Color3.fromRGB(242, 125, 0), function(child)
     local adornee = resolveAdornee(child)
     return adornee and adornee.Transparency == 0 and adornee.Name == "Scrap"
-end, true)
+end, TRANSPARENCY_REMOVE)
 
 CreateTracker("NPC", function()
     return workspace:FindFirstChild("Characters") and workspace.Characters:FindFirstChild("NPC")
@@ -507,4 +586,4 @@ CreateTracker("Player", function()
     return workspace:FindFirstChild("Characters") and workspace.Characters:FindFirstChild("Player")
 end, Color3.fromRGB(50, 200, 255), function(child)
     return child:IsA("Model") and child.Name ~= Players.LocalPlayer.Name
-end)
+end, TRANSPARENCY_FADE)
