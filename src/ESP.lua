@@ -350,34 +350,6 @@ function ESP.Add(obj, text, color, behavior, options)
                 table.insert(ESP.Connections[obj], descendant:GetPropertyChangedSignal("Transparency"):Connect(applyTransparencyBehavior))
                 applyTransparencyBehavior()
             end
-            return
-        end
-
-        if transparencyMode == TRANSPARENCY_FADE then
-            if highestTransparency > 0 then
-                setHighlightTransparency(visuals.Highlight, FADED_FILL_TRANSPARENCY, FADED_OUTLINE_TRANSPARENCY)
-            else
-                setHighlightTransparency(visuals.Highlight, DEFAULT_FILL_TRANSPARENCY, DEFAULT_OUTLINE_TRANSPARENCY)
-            end
-        end
-    end
-
-    if transparencyMode then
-        for _, descendant in ipairs(obj:GetDescendants()) do
-            if descendant:IsA("BasePart") then
-                table.insert(ESP.Connections[obj], descendant:GetPropertyChangedSignal("Transparency"):Connect(applyTransparencyMode))
-            end
-        end
-
-        if obj:IsA("BasePart") then
-            table.insert(ESP.Connections[obj], obj:GetPropertyChangedSignal("Transparency"):Connect(applyTransparencyMode))
-        end
-
-        table.insert(ESP.Connections[obj], obj.DescendantAdded:Connect(function(descendant)
-            if descendant:IsA("BasePart") then
-                table.insert(ESP.Connections[obj], descendant:GetPropertyChangedSignal("Transparency"):Connect(applyTransparencyMode))
-                applyTransparencyMode()
-            end
         end))
 
         applyTransparencyBehavior()
