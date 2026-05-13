@@ -37,17 +37,49 @@ local function resolveAdornee(target)
     end
 end
 
-local function hasVisibleTransparency(target)
+local DEFAULT_IGNORED_TRANSPARENCY_PARTS = {
+    HumanoidRootPart = true,
+    RootPart = true,
+    ProxyPart = true,
+    Hitbox = true,
+    Collision = true,
+    Collider = true,
+}
+
+local function isTransparencyRelevantPart(part, adornee, behavior)
+    if behavior.TransparencyAdorneeOnly then
+        return part == adornee
+    end
+
+    if behavior.IgnoreFullyTransparentParts and part.Transparency >= 1 then
+        return false
+    end
+
+    local ignoredPartNames = behavior.IgnoreTransparencyPartNames
+    if ignoredPartNames and ignoredPartNames[part.Name] then
+        return false
+    end
+
+    return true
+end
+
+local function hasVisibleTransparency(target, adornee, behavior)
     if not target then
         return false
     end
 
-    if target:IsA("BasePart") and target.Transparency > 0 then
+    behavior = behavior or {}
+
+    local function partHasVisibleTransparency(part)
+        return part.Transparency > 0 and isTransparencyRelevantPart(part, adornee, behavior)
+    end
+
+    if target:IsA("BasePart") and partHasVisibleTransparency(target) then
         return true
     end
 
     for _, descendant in ipairs(target:GetDescendants()) do
-        if descendant:IsA("BasePart") and descendant.Transparency > 0 then
+        if descendant:IsA("BasePart") and partHasVisibleTransparency(descendant) then
             return true
         end
     end
@@ -322,7 +354,7 @@ function ESP.Add(obj, text, color, behavior, options)
     local function applyTransparencyBehavior()
         if not ESP.Enabled or not ESP.Objects[obj] then return end
 
-        local transparent = hasVisibleTransparency(obj)
+        local transparent = hasVisibleTransparency(obj, adornee, behavior)
 
         if behavior.RemoveWhenTransparent and transparent then
             ESP.Remove(obj)
@@ -601,8 +633,8 @@ CreateTracker("Scrap", function()
     return workspace:FindFirstChild("Debris")
 end, Color3.fromRGB(242, 125, 0), function(child)
     local adornee = resolveAdornee(child)
-    return adornee and adornee.Transparency == 0 and adornee.Name == "Scrap"
-end, { RemoveWhenTransparent = true })
+    return adornee and adornee.Name == "Scrap"
+end, { FadeWhenTransparent = true, TransparencyAdorneeOnly = true })
 
 CreateTracker("NPC", function()
     return workspace:FindFirstChild("Characters") and workspace.Characters:FindFirstChild("NPC")
@@ -612,4 +644,8 @@ CreateTracker("Player", function()
     return workspace:FindFirstChild("Characters") and workspace.Characters:FindFirstChild("Player")
 end, Color3.fromRGB(50, 200, 255), function(child)
     return child:IsA("Model") and child.Name ~= Players.LocalPlayer.Name
-end, { FadeWhenTransparent = true })
+end, {
+    FadeWhenTransparent = true,
+    IgnoreFullyTransparentParts = true,
+    IgnoreTransparencyPartNames = DEFAULT_IGNORED_TRANSPARENCY_PARTS,
+})
